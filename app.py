@@ -1,14 +1,12 @@
 from flask import Flask, request
 import os
 import requests
+import psycopg2
 
 app = Flask(__name__)
 
 CHANNEL_ACCESS_TOKEN = os.environ.get("CHANNEL_ACCESS_TOKEN")
-
-
-# ユーザーごとのゲーム状態
-user_states = {}
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 
 # テスト用の部屋構造
@@ -43,16 +41,83 @@ flick_directions = {
 }
 
 
+def get_connection():
+    return psycopg2.connect(DATABASE_URL)
+
+
+def initialize_database():
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS players (
+            user_id TEXT PRIMARY KEY,
+            current_room TEXT NOT NULL,
+            history TEXT NOT NULL
+        )
+    """)
+
+    connection.commit()
+    cursor.close()
+    connection.close()
+
+
 def get_user_state(user_id):
-    """ユーザーの状態を取得する。初回なら「あ」から開始する。"""
+    connection = get_connection()
+    cursor = connection.cursor()
 
-    if user_id not in user_states:
-        user_states[user_id] = {
-            "current_room": "あ",
-            "history": []
-        }
+    cursor.execute(
+        """
+        SELECT current_room, history
+        FROM players
+        WHERE user_id = %s
+        """,
+        (user_id,)
+    )
 
-    return user_states[user_id]
+    result = cursor.fetchone()
+
+    if result is None:
+        current_room = "あ"
+        history = ""
+
+        cursor.execute(
+            """
+            INSERT INTO players (user_id, current_room, history)
+            VALUES (%s, %s, %s)
+            """,
+            (user_id, current_room, history)
+        )
+
+        connection.commit()
+
+    else:
+        current_room = result[0]
+        history = result[1]
+
+    cursor.close()
+    connection.close()
+
+    return current_room, history
+
+
+def update_user_state(user_id, current_room, history):
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        UPDATE players
+        SET current_room = %s,
+            history = %s
+        WHERE user_id = %s
+        """,
+        (current_room, history, user_id)
+    )
+
+    connection.commit()
+    cursor.close()
+    connection.close()
 
 
 @app.route("/")
@@ -81,48 +146,62 @@ def callback():
         user_id = event.get("source", {}).get("userId")
         reply_token = event.get("replyToken")
 
-        # ユーザーの現在地と履歴を取得
-        state = get_user_state(user_id)
+        current_room, history = get_user_state(user_id)
 
-        current_room = state["current_room"]
-
-        # 入力された文字がフリック入力として定義されているか確認
         if text in flick_directions:
 
             direction = flick_directions[text]
-
             next_room = rooms[current_room].get(direction)
 
             if next_room is not None:
 
-                # 移動成功
-                state["current_room"] = next_room
+                current_room = next_room
 
-                # 成功した入力だけ履歴に追加
-                state["history"].append(text)
+                if history:
+                    history += "," + text
+                else:
+                    history = text
+
+                update_user_state(
+                    user_id,
+                    current_room,
+                    history
+                )
+
+                history_display = " → ".join(history.split(","))
 
                 reply_text = (
-                    f"{current_room}の部屋から"
-                    f"{next_room}の部屋へ移動しました！\n"
-                    f"現在地：{next_room}\n"
-                    f"履歴：{' → '.join(state['history'])}"
+                    f"{current_room}の部屋へ移動しました！\n"
+                    f"現在地：{current_room}\n"
+                    f"履歴：{history_display}"
                 )
 
             else:
 
-                # 移動できない場合
+                history_display = (
+                    " → ".join(history.split(","))
+                    if history
+                    else "なし"
+                )
+
                 reply_text = (
                     f"その方向には扉がありません。\n"
                     f"現在地：{current_room}\n"
-                    f"履歴：{' → '.join(state['history']) if state['history'] else 'なし'}"
+                    f"履歴：{history_display}"
                 )
 
         else:
 
+            history_display = (
+                " → ".join(history.split(","))
+                if history
+                else "なし"
+            )
+
             reply_text = (
                 f"現在地：{current_room}\n"
                 f"「{text}」は移動入力ではありません。\n"
-                f"履歴：{' → '.join(state['history']) if state['history'] else 'なし'}"
+                f"履歴：{history_display}"
             )
 
         headers = {
@@ -150,3 +229,7 @@ def callback():
         print(response.text)
 
     return "OK", 200
+
+
+# アプリ起動時にDBを準備
+initialize_database()
