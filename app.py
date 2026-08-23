@@ -17,32 +17,43 @@ def callback():
     print("LINEからWebhookを受信しました！")
     print(data)
 
-    for event in data.get("events", []):
-        if event.get("type") == "message":
-            reply_token = event.get("replyToken")
+   for event in data.get("events", []):
+    if event.get("type") == "message":
+        message = event.get("message", {})
 
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
-            }
+        if message.get("type") != "text":
+            continue
 
-            body = {
-                "replyToken": reply_token,
-                "messages": [
-                    {
-                        "type": "text",
-                        "text": "受信しました！"
-                    }
-                ]
-            }
+        text = message.get("text")
+        reply_token = event.get("replyToken")
 
-            response = requests.post(
-                "https://api.line.me/v2/bot/message/reply",
-                headers=headers,
-                json=body
-            )
+        if text == "き":
+            reply_text = "あの部屋へ移動！"
+        else:
+            reply_text = "受信しました！"
 
-            print("LINEへの返信結果:", response.status_code)
-            print(response.text)
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+        }
+
+        body = {
+            "replyToken": reply_token,
+            "messages": [
+                {
+                    "type": "text",
+                    "text": reply_text
+                }
+            ]
+        }
+
+        response = requests.post(
+            "https://api.line.me/v2/bot/message/reply",
+            headers=headers,
+            json=body
+        )
+
+        print("LINEへの返信結果:", response.status_code)
+        print(response.text)
 
     return "OK", 200
