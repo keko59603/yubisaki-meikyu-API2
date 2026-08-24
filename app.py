@@ -214,13 +214,14 @@ def callback():
             continue
 
         text = message.get("text")
-
         user_id = event.get("source", {}).get("userId")
-
         reply_token = event.get("replyToken")
 
 
+        # ==============================
         # 画像テスト
+        # ==============================
+
         if text == "画像テスト":
 
             image_url = request.host_url.rstrip("/") + "/images/test.png"
@@ -253,6 +254,10 @@ def callback():
             continue
 
 
+        # ==============================
+        # 現在の状態を取得
+        # ==============================
+
         (
             current_room,
             history,
@@ -262,6 +267,10 @@ def callback():
             game_clear
         ) = get_user_state(user_id)
 
+
+        # ==============================
+        # オールリセット
+        # ==============================
 
         if text == "オールリセット":
 
@@ -285,6 +294,10 @@ def callback():
             reply_text = "すべての記録をリセットしました。\n現在地：か"
 
 
+        # ==============================
+        # 履歴リセット
+        # ==============================
+
         elif text == "履歴リセット":
 
             current_room = "か"
@@ -303,12 +316,17 @@ def callback():
             reply_text = "履歴をリセットしました。\n現在地：か"
 
 
+        # ==============================
+        # 状態確認
+        # ==============================
+
         elif text == "状態確認":
 
             if user_id != ADMIN_USER_ID:
                 reply_text = "このコマンドは使用できません。"
 
             else:
+
                 history_display = (
                     " → ".join(history.split(","))
                     if history
@@ -326,6 +344,10 @@ def callback():
                 )
 
 
+        # ==============================
+        # ゲームクリア済み
+        # ==============================
+
         elif game_clear:
 
             reply_text = (
@@ -334,12 +356,21 @@ def callback():
             )
 
 
+        # ==============================
+        # 移動処理
+        # ==============================
+
         else:
 
             direction = room_inputs.get(
                 current_room,
                 {}
             ).get(text)
+
+
+            # ==========================
+            # 移動入力ではない
+            # ==========================
 
             if direction is None:
 
@@ -348,9 +379,15 @@ def callback():
                     f"「{text}」はこの部屋の移動入力ではありません。"
                 )
 
+
             else:
 
                 next_room = rooms[current_room].get(direction)
+
+
+                # ======================
+                # 扉がない
+                # ======================
 
                 if next_room is None:
 
@@ -358,6 +395,11 @@ def callback():
                         "その方向には進めません。\n"
                         f"現在地：{current_room}"
                     )
+
+
+                # ======================
+                # 削除部屋
+                # ======================
 
                 elif next_room == "DELETE":
 
@@ -383,8 +425,15 @@ def callback():
                             game_clear
                         )
 
-                        reply_text = "履歴をリセットしました。\n現在地：か"
+                        reply_text = (
+                            "履歴をリセットしました。\n"
+                            "現在地：か"
+                        )
 
+
+                # ======================
+                # なへの扉
+                # ======================
 
                 elif next_room == "な":
 
@@ -420,6 +469,10 @@ def callback():
                         )
 
 
+                # ======================
+                # 通常移動
+                # ======================
+
                 else:
 
                     current_room = next_room
@@ -430,7 +483,15 @@ def callback():
                         history = text
 
 
+                    # ==================
+                    # わの部屋
+                    # ==================
+
                     if current_room == "わ":
+
+                        # ------------------
+                        # ゲームクリア
+                        # ------------------
 
                         if history == "こ,の,よ":
 
@@ -452,65 +513,149 @@ def callback():
                                 "おめでとうございます！"
                             )
 
-                      elif not wa_reached:
 
-    wa_reached = True
-    n_unlocked = True
-    delete_unlocked = True
+                        # ------------------
+                        # 初めてわに到達
+                        # ------------------
 
-    update_user_state(
-        user_id,
-        current_room,
-        history,
-        n_unlocked,
-        delete_unlocked,
-        wa_reached,
-        game_clear
-    )
+                        elif not wa_reached:
 
-    answer_text = "".join(history.split(","))
+                            wa_reached = True
+                            n_unlocked = True
+                            delete_unlocked = True
 
-    base_url = request.host_url.rstrip("/")
+                            update_user_state(
+                                user_id,
+                                current_room,
+                                history,
+                                n_unlocked,
+                                delete_unlocked,
+                                wa_reached,
+                                game_clear
+                            )
 
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
-    }
+                            answer_text = "".join(
+                                history.split(",")
+                            )
 
-    body = {
-        "replyToken": reply_token,
-        "messages": [
-            {
-                "type": "text",
-                "text": "どこかの扉のロックが解除された。"
-            },
-            {
-                "type": "image",
-                "originalContentUrl": base_url + "/images/wa.png",
-                "previewImageUrl": base_url + "/images/wa.png"
-            },
-            {
-                "type": "image",
-                "originalContentUrl": base_url + "/images/final.png",
-                "previewImageUrl": base_url + "/images/final.png"
-            },
-            {
-                "type": "text",
-                "text": "解答欄：" + answer_text
-            }
-        ]
-    }
+                            base_url = request.host_url.rstrip("/")
 
-    response = requests.post(
-        "https://api.line.me/v2/bot/message/reply",
-        headers=headers,
-        json=body
-    )
+                            headers = {
+                                "Content-Type": "application/json",
+                                "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+                            }
 
-    print("LINEへの返信結果:", response.status_code)
-    print(response.text)
+                            body = {
+                                "replyToken": reply_token,
+                                "messages": [
+                                    {
+                                        "type": "text",
+                                        "text": "どこかの扉のロックが解除された。"
+                                    },
+                                    {
+                                        "type": "image",
+                                        "originalContentUrl": base_url + "/images/wa.png",
+                                        "previewImageUrl": base_url + "/images/wa.png"
+                                    },
+                                    {
+                                        "type": "image",
+                                        "originalContentUrl": base_url + "/images/final.png",
+                                        "previewImageUrl": base_url + "/images/final.png"
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "解答欄：" + answer_text
+                                    }
+                                ]
+                            }
 
-    continue
+                            response = requests.post(
+                                "https://api.line.me/v2/bot/message/reply",
+                                headers=headers,
+                                json=body
+                            )
+
+                            print(
+                                "LINEへの返信結果:",
+                                response.status_code
+                            )
+
+                            print(response.text)
+
+                            continue
+
+
+                        # ------------------
+                        # 2回目以降のわ
+                        # ------------------
+
+                        else:
+
+                            update_user_state(
+                                user_id,
+                                current_room,
+                                history,
+                                n_unlocked,
+                                delete_unlocked,
+                                wa_reached,
+                                game_clear
+                            )
+
+                            reply_text = (
+                                f"{current_room}の部屋に移動しました！\n"
+                                f"現在地：{current_room}"
+                            )
+
+
+                    # ==================
+                    # その他の部屋
+                    # ==================
+
+                    else:
+
+                        update_user_state(
+                            user_id,
+                            current_room,
+                            history,
+                            n_unlocked,
+                            delete_unlocked,
+                            wa_reached,
+                            game_clear
+                        )
+
+                        reply_text = (
+                            f"{current_room}の部屋に移動しました！\n"
+                            f"現在地：{current_room}"
+                        )
+
+
+        # ==============================
+        # LINEへ通常返信
+        # ==============================
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+        }
+
+        body = {
+            "replyToken": reply_token,
+            "messages": [
+                {
+                    "type": "text",
+                    "text": reply_text
+                }
+            ]
+        }
+
+        response = requests.post(
+            "https://api.line.me/v2/bot/message/reply",
+            headers=headers,
+            json=body
+        )
+
+        print("LINEへの返信結果:", response.status_code)
+        print(response.text)
 
     return "OK", 200
 
