@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, send_from_directory
 import os
 import requests
 import psycopg2
@@ -365,7 +365,10 @@ def home():
 
     return "Yubisaki no Meikyu API is alive!"
 
-
+@app.route("/images/<filename>")
+def serve_image(filename):
+    return send_from_directory("images", filename)
+    
 # ==========================================
 # LINE Webhook
 # ==========================================
