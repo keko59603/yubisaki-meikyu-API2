@@ -1,3 +1,4 @@
+```python
 from flask import Flask, request
 import os
 import requests
@@ -100,25 +101,37 @@ flick_directions = {
 
 
 # ==========================================
-# データベース
+# データベース接続
 # ==========================================
 
 def get_connection():
     return psycopg2.connect(DATABASE_URL)
 
 
+# ==========================================
+# データベース初期化
+# ==========================================
+
 def initialize_database():
 
     connection = get_connection()
     cursor = connection.cursor()
 
+    # playersテーブルがなければ作成
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS players (
             user_id TEXT PRIMARY KEY,
             current_room TEXT NOT NULL,
-            history TEXT NOT NULL,
-            unlocked_rooms TEXT NOT NULL
+            history TEXT NOT NULL
         )
+    """)
+
+    # 既存のplayersテーブルにも
+    # unlocked_roomsを自動追加
+    cursor.execute("""
+        ALTER TABLE players
+        ADD COLUMN IF NOT EXISTS unlocked_rooms
+        TEXT NOT NULL DEFAULT 'か'
     """)
 
     connection.commit()
@@ -128,7 +141,7 @@ def initialize_database():
 
 
 # ==========================================
-# プレイヤー状態取得
+# ユーザー状態取得
 # ==========================================
 
 def get_user_state(user_id):
@@ -147,6 +160,7 @@ def get_user_state(user_id):
 
     result = cursor.fetchone()
 
+    # 初めて遊ぶユーザー
     if result is None:
 
         current_room = "か"
@@ -187,7 +201,7 @@ def get_user_state(user_id):
 
 
 # ==========================================
-# プレイヤー状態保存
+# ユーザー状態保存
 # ==========================================
 
 def update_user_state(
@@ -224,7 +238,7 @@ def update_user_state(
 
 
 # ==========================================
-# メインページ
+# ホーム
 # ==========================================
 
 @app.route("/")
@@ -266,8 +280,9 @@ def callback():
             "replyToken"
         )
 
+
         # ----------------------------------
-        # 現在のプレイヤー状態
+        # 現在の状態を取得
         # ----------------------------------
 
         (
@@ -278,7 +293,7 @@ def callback():
 
 
         # ----------------------------------
-        # フリック入力
+        # 移動入力
         # ----------------------------------
 
         if text in flick_directions:
@@ -291,7 +306,7 @@ def callback():
 
 
             # ----------------------------------
-            # 移動できない
+            # 扉がない
             # ----------------------------------
 
             if next_room is None:
@@ -317,10 +332,13 @@ def callback():
 
             elif next_room == "DELETE":
 
+                # 現在地を「か」に戻す
                 current_room = "か"
+
+                # 履歴だけ消す
                 history = ""
 
-                # 開放済み部屋は維持する
+                # 開放済み部屋はそのまま維持
 
                 update_user_state(
                     user_id,
@@ -336,18 +354,14 @@ def callback():
 
 
             # ----------------------------------
-            # 通常の移動
+            # 通常移動
             # ----------------------------------
 
             else:
 
-                # 開放されていない部屋への移動
-                # 現段階では「か」以外も移動可能にしている。
-                # 開放条件を実装する際にここへ追加する。
-
                 current_room = next_room
 
-                # 履歴追加
+                # 成功した移動だけ履歴に追加
 
                 if history:
 
@@ -358,7 +372,9 @@ def callback():
                     history = text
 
 
-                # 移動先を開放済みにする
+                # ----------------------------------
+                # 開放済み部屋に追加
+                # ----------------------------------
 
                 unlocked_list = (
                     unlocked_rooms.split(",")
@@ -377,7 +393,9 @@ def callback():
                 )
 
 
+                # ----------------------------------
                 # DB保存
+                # ----------------------------------
 
                 update_user_state(
                     user_id,
@@ -464,3 +482,4 @@ def callback():
 # ==========================================
 
 initialize_database()
+```
