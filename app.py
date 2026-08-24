@@ -164,7 +164,8 @@ room_inputs = {
         "ゐ": "左",
         "う": "上",
         "ゑ": "右",
-        "を": "下"
+        "を": "下",
+        "ん": "上"
     }
 }
 
@@ -206,6 +207,12 @@ def initialize_database():
         BOOLEAN NOT NULL DEFAULT FALSE
     """)
 
+    cursor.execute("""
+        ALTER TABLE players
+        ADD COLUMN IF NOT EXISTS wa_reached
+        BOOLEAN NOT NULL DEFAULT FALSE
+    """)
+
     connection.commit()
 
     cursor.close()
@@ -227,7 +234,8 @@ def get_user_state(user_id):
             current_room,
             history,
             n_unlocked,
-            delete_unlocked
+            delete_unlocked,
+            wa_reached
         FROM players
         WHERE user_id = %s
         """,
@@ -242,6 +250,7 @@ def get_user_state(user_id):
         history = ""
         n_unlocked = False
         delete_unlocked = False
+        wa_reached = False
 
         cursor.execute(
             """
@@ -251,16 +260,18 @@ def get_user_state(user_id):
                 current_room,
                 history,
                 n_unlocked,
-                delete_unlocked
+                delete_unlocked,
+                wa_reached
             )
-            VALUES (%s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """,
             (
                 user_id,
                 current_room,
                 history,
                 n_unlocked,
-                delete_unlocked
+                delete_unlocked,
+                wa_reached
             )
         )
 
@@ -272,6 +283,7 @@ def get_user_state(user_id):
         history = result[1]
         n_unlocked = result[2]
         delete_unlocked = result[3]
+        wa_reached = result[4]
 
     cursor.close()
     connection.close()
@@ -280,7 +292,8 @@ def get_user_state(user_id):
         current_room,
         history,
         n_unlocked,
-        delete_unlocked
+        delete_unlocked,
+        wa_reached
     )
 
 
@@ -293,7 +306,8 @@ def update_user_state(
     current_room,
     history,
     n_unlocked,
-    delete_unlocked
+    delete_unlocked,
+    wa_reached
 ):
 
     connection = get_connection()
@@ -306,7 +320,8 @@ def update_user_state(
             current_room = %s,
             history = %s,
             n_unlocked = %s,
-            delete_unlocked = %s
+            delete_unlocked = %s,
+            wa_reached = %s
         WHERE user_id = %s
         """,
         (
@@ -314,6 +329,7 @@ def update_user_state(
             history,
             n_unlocked,
             delete_unlocked,
+            wa_reached,
             user_id
         )
     )
@@ -371,7 +387,8 @@ def callback():
             current_room,
             history,
             n_unlocked,
-            delete_unlocked
+            delete_unlocked,
+            wa_reached
         ) = get_user_state(user_id)
 
 
@@ -439,7 +456,8 @@ def callback():
                         current_room,
                         history,
                         n_unlocked,
-                        delete_unlocked
+                        delete_unlocked,
+                        wa_reached
                     )
 
                     reply_text = (
@@ -475,7 +493,8 @@ def callback():
                         current_room,
                         history,
                         n_unlocked,
-                        delete_unlocked
+                        delete_unlocked,
+                        wa_reached
                     )
 
                     reply_text = (
@@ -499,19 +518,29 @@ def callback():
 
 
                 # ==================================
-                # わの部屋に到達
+                # わの部屋に初めて到達
                 # ==================================
 
                 if current_room == "わ":
 
-                    n_unlocked = True
-                    delete_unlocked = True
+                    if not wa_reached:
 
-                    reply_text = (
-                        "わの部屋へ移動しました！\n"
-                        "新たな扉のロックが解除されたようです。\n"
-                        f"現在地：{current_room}"
-                    )
+                        wa_reached = True
+                        n_unlocked = True
+                        delete_unlocked = True
+
+                        reply_text = (
+                            "わの部屋へ移動しました！\n"
+                            "新たな扉のロックが解除されたようです。\n"
+                            f"現在地：{current_room}"
+                        )
+
+                    else:
+
+                        reply_text = (
+                            "わの部屋へ移動しました！\n"
+                            f"現在地：{current_room}"
+                        )
 
                 else:
 
@@ -526,7 +555,8 @@ def callback():
                     current_room,
                     history,
                     n_unlocked,
-                    delete_unlocked
+                    delete_unlocked,
+                    wa_reached
                 )
 
 
