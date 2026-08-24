@@ -550,7 +550,7 @@ def callback():
                                 "messages": [
                                     {
                                         "type": "text",
-                                        "text": "どこかの扉のロックが解除された。"
+                                        "text": "すべての扉のロックが解除された。"
                                     },
                                     {
                                         "type": "image",
