@@ -125,8 +125,14 @@ def initialize_database():
 
     cursor.execute("""
         ALTER TABLE players
-        ADD COLUMN IF NOT EXISTS unlocked_rooms
-        TEXT NOT NULL DEFAULT 'か'
+        ADD COLUMN IF NOT EXISTS n_unlocked
+        BOOLEAN NOT NULL DEFAULT FALSE
+    """)
+
+    cursor.execute("""
+        ALTER TABLE players
+        ADD COLUMN IF NOT EXISTS delete_unlocked
+        BOOLEAN NOT NULL DEFAULT FALSE
     """)
 
     connection.commit()
@@ -146,7 +152,11 @@ def get_user_state(user_id):
 
     cursor.execute(
         """
-        SELECT current_room, history, unlocked_rooms
+        SELECT
+            current_room,
+            history,
+            n_unlocked,
+            delete_unlocked
         FROM players
         WHERE user_id = %s
         """,
@@ -159,7 +169,8 @@ def get_user_state(user_id):
 
         current_room = "か"
         history = ""
-        unlocked_rooms = "か"
+        n_unlocked = False
+        delete_unlocked = False
 
         cursor.execute(
             """
@@ -168,15 +179,17 @@ def get_user_state(user_id):
                 user_id,
                 current_room,
                 history,
-                unlocked_rooms
+                n_unlocked,
+                delete_unlocked
             )
-            VALUES (%s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s)
             """,
             (
                 user_id,
                 current_room,
                 history,
-                unlocked_rooms
+                n_unlocked,
+                delete_unlocked
             )
         )
 
@@ -186,12 +199,18 @@ def get_user_state(user_id):
 
         current_room = result[0]
         history = result[1]
-        unlocked_rooms = result[2]
+        n_unlocked = result[2]
+        delete_unlocked = result[3]
 
     cursor.close()
     connection.close()
 
-    return current_room, history, unlocked_rooms
+    return (
+        current_room,
+        history,
+        n_unlocked,
+        delete_unlocked
+    )
 
 
 # ==========================================
@@ -202,7 +221,8 @@ def update_user_state(
     user_id,
     current_room,
     history,
-    unlocked_rooms
+    n_unlocked,
+    delete_unlocked
 ):
 
     connection = get_connection()
@@ -214,13 +234,15 @@ def update_user_state(
         SET
             current_room = %s,
             history = %s,
-            unlocked_rooms = %s
+            n_unlocked = %s,
+            delete_unlocked = %s
         WHERE user_id = %s
         """,
         (
             current_room,
             history,
-            unlocked_rooms,
+            n_unlocked,
+            delete_unlocked,
             user_id
         )
     )
@@ -277,7 +299,8 @@ def callback():
         (
             current_room,
             history,
-            unlocked_rooms
+            n_unlocked,
+            delete_unlocked
         ) = get_user_state(user_id)
 
 
@@ -294,105 +317,129 @@ def callback():
             )
 
 
-            # ----------------------------------
+            # ==================================
             # 扉がない
-            # ----------------------------------
+            # ==================================
 
             if next_room is None:
 
-                history_display = (
-                    " → ".join(
-                        history.split(",")
-                    )
-                    if history
-                    else "なし"
-                )
-
                 reply_text = (
                     "その方向には進めません。\n"
-                    f"現在地：{current_room}\n"
-                    f"履歴：{history_display}"
+                    f"現在地：{current_room}"
                 )
 
 
-            # ----------------------------------
+            # ==================================
             # 削除ボタン
-            # ----------------------------------
+            # ==================================
 
             elif next_room == "DELETE":
 
-                current_room = "か"
-                history = ""
+                if not delete_unlocked:
 
-                update_user_state(
-                    user_id,
-                    current_room,
-                    history,
-                    unlocked_rooms
-                )
+                    reply_text = (
+                        "その扉はまだ開いていません。\n"
+                        f"現在地：{current_room}"
+                    )
 
-                reply_text = (
-                    "入力をリセットしました。\n"
-                    "現在地：か"
-                )
+                else:
+
+                    current_room = "か"
+                    history = ""
+
+                    update_user_state(
+                        user_id,
+                        current_room,
+                        history,
+                        n_unlocked,
+                        delete_unlocked
+                    )
+
+                    reply_text = (
+                        "入力をリセットしました。\n"
+                        "現在地：か"
+                    )
 
 
-            # ----------------------------------
+            # ==================================
+            # 「な」への扉
+            # ==================================
+
+            elif next_room == "な":
+
+                if not n_unlocked:
+
+                    reply_text = (
+                        "その扉はまだロックされています。\n"
+                        f"現在地：{current_room}"
+                    )
+
+                else:
+
+                    current_room = next_room
+
+                    if history:
+                        history += "," + text
+                    else:
+                        history = text
+
+                    update_user_state(
+                        user_id,
+                        current_room,
+                        history,
+                        n_unlocked,
+                        delete_unlocked
+                    )
+
+                    reply_text = (
+                        f"{current_room}の部屋へ移動しました！\n"
+                        f"現在地：{current_room}"
+                    )
+
+
+            # ==================================
             # 通常移動
-            # ----------------------------------
+            # ==================================
 
             else:
 
                 current_room = next_room
 
                 if history:
-
                     history += "," + text
-
                 else:
-
                     history = text
 
 
-                # ----------------------------------
-                # 開放済み部屋に追加
-                # ----------------------------------
+                # ==================================
+                # わの部屋に到達
+                # ==================================
 
-                unlocked_list = (
-                    unlocked_rooms.split(",")
-                    if unlocked_rooms
-                    else []
-                )
+                if current_room == "わ":
 
-                if current_room not in unlocked_list:
+                    n_unlocked = True
+                    delete_unlocked = True
 
-                    unlocked_list.append(
-                        current_room
+                    reply_text = (
+                        "わの部屋へ移動しました！\n"
+                        "新たな扉のロックが解除されたようです。\n"
+                        f"現在地：{current_room}"
                     )
 
-                unlocked_rooms = ",".join(
-                    unlocked_list
-                )
+                else:
+
+                    reply_text = (
+                        f"{current_room}の部屋へ移動しました！\n"
+                        f"現在地：{current_room}"
+                    )
 
 
                 update_user_state(
                     user_id,
                     current_room,
                     history,
-                    unlocked_rooms
-                )
-
-
-                history_display = (
-                    " → ".join(
-                        history.split(",")
-                    )
-                )
-
-                reply_text = (
-                    f"{current_room}の部屋へ移動しました！\n"
-                    f"現在地：{current_room}\n"
-                    f"履歴：{history_display}"
+                    n_unlocked,
+                    delete_unlocked
                 )
 
 
@@ -402,18 +449,9 @@ def callback():
 
         else:
 
-            history_display = (
-                " → ".join(
-                    history.split(",")
-                )
-                if history
-                else "なし"
-            )
-
             reply_text = (
                 f"現在地：{current_room}\n"
-                f"「{text}」は移動入力ではありません。\n"
-                f"履歴：{history_display}"
+                f"「{text}」は移動入力ではありません。"
             )
 
 
