@@ -9,30 +9,88 @@ CHANNEL_ACCESS_TOKEN = os.environ.get("CHANNEL_ACCESS_TOKEN")
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 
-# テスト用の部屋構造
+# ==========================================
+# 部屋の構造
+# ==========================================
+
 rooms = {
     "あ": {
         "上": None,
         "右": "か",
+        "下": "た",
+        "左": None
+    },
+
+    "か": {
+        "上": None,
+        "右": "さ",
+        "下": "な",
+        "左": "あ"
+    },
+
+    "さ": {
+        "上": None,
+        "右": "DELETE",
+        "下": "は",
+        "左": "か"
+    },
+
+    "た": {
+        "上": "あ",
+        "右": "な",
+        "下": "ま",
+        "左": None
+    },
+
+    "な": {
+        "上": "か",
+        "右": "は",
+        "下": "や",
+        "左": "た"
+    },
+
+    "は": {
+        "上": "さ",
+        "右": None,
+        "下": "ら",
+        "左": "な"
+    },
+
+    "ま": {
+        "上": "た",
+        "右": "や",
         "下": None,
         "左": None
     },
-    "か": {
-        "上": None,
-        "右": "な",
-        "下": None,
-        "左": "あ"
+
+    "や": {
+        "上": "な",
+        "右": None,
+        "下": "わ",
+        "左": None
     },
-    "な": {
-        "上": None,
+
+    "ら": {
+        "上": "は",
         "右": None,
         "下": None,
-        "左": "か"
+        "左": "や"
+    },
+
+    "わ": {
+        "上": "や",
+        "右": None,
+        "下": None,
+        "左": None
     }
 }
 
 
-# フリック入力の仮ルール
+# ==========================================
+# フリック入力
+# ※現在は仮ルール
+# ==========================================
+
 flick_directions = {
     "き": "上",
     "こ": "右",
@@ -41,11 +99,16 @@ flick_directions = {
 }
 
 
+# ==========================================
+# データベース
+# ==========================================
+
 def get_connection():
     return psycopg2.connect(DATABASE_URL)
 
 
 def initialize_database():
+
     connection = get_connection()
     cursor = connection.cursor()
 
@@ -53,22 +116,29 @@ def initialize_database():
         CREATE TABLE IF NOT EXISTS players (
             user_id TEXT PRIMARY KEY,
             current_room TEXT NOT NULL,
-            history TEXT NOT NULL
+            history TEXT NOT NULL,
+            unlocked_rooms TEXT NOT NULL
         )
     """)
 
     connection.commit()
+
     cursor.close()
     connection.close()
 
 
+# ==========================================
+# プレイヤー状態取得
+# ==========================================
+
 def get_user_state(user_id):
+
     connection = get_connection()
     cursor = connection.cursor()
 
     cursor.execute(
         """
-        SELECT current_room, history
+        SELECT current_room, history, unlocked_rooms
         FROM players
         WHERE user_id = %s
         """,
@@ -78,55 +148,98 @@ def get_user_state(user_id):
     result = cursor.fetchone()
 
     if result is None:
-        current_room = "あ"
+
+        current_room = "か"
         history = ""
+        unlocked_rooms = "か"
 
         cursor.execute(
             """
-            INSERT INTO players (user_id, current_room, history)
-            VALUES (%s, %s, %s)
+            INSERT INTO players
+            (
+                user_id,
+                current_room,
+                history,
+                unlocked_rooms
+            )
+            VALUES (%s, %s, %s, %s)
             """,
-            (user_id, current_room, history)
+            (
+                user_id,
+                current_room,
+                history,
+                unlocked_rooms
+            )
         )
 
         connection.commit()
 
     else:
+
         current_room = result[0]
         history = result[1]
+        unlocked_rooms = result[2]
 
     cursor.close()
     connection.close()
 
-    return current_room, history
+    return current_room, history, unlocked_rooms
 
 
-def update_user_state(user_id, current_room, history):
+# ==========================================
+# プレイヤー状態保存
+# ==========================================
+
+def update_user_state(
+    user_id,
+    current_room,
+    history,
+    unlocked_rooms
+):
+
     connection = get_connection()
     cursor = connection.cursor()
 
     cursor.execute(
         """
         UPDATE players
-        SET current_room = %s,
-            history = %s
+        SET
+            current_room = %s,
+            history = %s,
+            unlocked_rooms = %s
         WHERE user_id = %s
         """,
-        (current_room, history, user_id)
+        (
+            current_room,
+            history,
+            unlocked_rooms,
+            user_id
+        )
     )
 
     connection.commit()
+
     cursor.close()
     connection.close()
 
 
+# ==========================================
+# メインページ
+# ==========================================
+
 @app.route("/")
 def home():
+
     return "Yubisaki no Meikyu API is alive!"
 
 
+# ==========================================
+# LINE Webhook
+# ==========================================
+
 @app.route("/callback", methods=["POST"])
 def callback():
+
     data = request.get_json()
 
     print("LINEからWebhookを受信しました！")
@@ -143,32 +256,142 @@ def callback():
             continue
 
         text = message.get("text")
-        user_id = event.get("source", {}).get("userId")
-        reply_token = event.get("replyToken")
 
-        current_room, history = get_user_state(user_id)
+        user_id = event.get(
+            "source",
+            {}
+        ).get("userId")
+
+        reply_token = event.get(
+            "replyToken"
+        )
+
+        # ----------------------------------
+        # 現在のプレイヤー状態
+        # ----------------------------------
+
+        (
+            current_room,
+            history,
+            unlocked_rooms
+        ) = get_user_state(user_id)
+
+
+        # ----------------------------------
+        # フリック入力
+        # ----------------------------------
 
         if text in flick_directions:
 
             direction = flick_directions[text]
-            next_room = rooms[current_room].get(direction)
 
-            if next_room is not None:
+            next_room = rooms[current_room].get(
+                direction
+            )
 
-                current_room = next_room
 
-                if history:
-                    history += "," + text
-                else:
-                    history = text
+            # ----------------------------------
+            # 移動できない
+            # ----------------------------------
+
+            if next_room is None:
+
+                history_display = (
+                    " → ".join(
+                        history.split(",")
+                    )
+                    if history
+                    else "なし"
+                )
+
+                reply_text = (
+                    "その方向には進めません。\n"
+                    f"現在地：{current_room}\n"
+                    f"履歴：{history_display}"
+                )
+
+
+            # ----------------------------------
+            # 削除ボタン
+            # ----------------------------------
+
+            elif next_room == "DELETE":
+
+                current_room = "か"
+                history = ""
+
+                # 開放済み部屋は維持する
 
                 update_user_state(
                     user_id,
                     current_room,
-                    history
+                    history,
+                    unlocked_rooms
                 )
 
-                history_display = " → ".join(history.split(","))
+                reply_text = (
+                    "入力をリセットしました。\n"
+                    "現在地：か"
+                )
+
+
+            # ----------------------------------
+            # 通常の移動
+            # ----------------------------------
+
+            else:
+
+                # 開放されていない部屋への移動
+                # 現段階では「か」以外も移動可能にしている。
+                # 開放条件を実装する際にここへ追加する。
+
+                current_room = next_room
+
+                # 履歴追加
+
+                if history:
+
+                    history += "," + text
+
+                else:
+
+                    history = text
+
+
+                # 移動先を開放済みにする
+
+                unlocked_list = (
+                    unlocked_rooms.split(",")
+                    if unlocked_rooms
+                    else []
+                )
+
+                if current_room not in unlocked_list:
+
+                    unlocked_list.append(
+                        current_room
+                    )
+
+                unlocked_rooms = ",".join(
+                    unlocked_list
+                )
+
+
+                # DB保存
+
+                update_user_state(
+                    user_id,
+                    current_room,
+                    history,
+                    unlocked_rooms
+                )
+
+
+                history_display = (
+                    " → ".join(
+                        history.split(",")
+                    )
+                )
 
                 reply_text = (
                     f"{current_room}の部屋へ移動しました！\n"
@@ -176,24 +399,17 @@ def callback():
                     f"履歴：{history_display}"
                 )
 
-            else:
 
-                history_display = (
-                    " → ".join(history.split(","))
-                    if history
-                    else "なし"
-                )
-
-                reply_text = (
-                    f"その方向には扉がありません。\n"
-                    f"現在地：{current_room}\n"
-                    f"履歴：{history_display}"
-                )
+        # ----------------------------------
+        # 移動入力ではない
+        # ----------------------------------
 
         else:
 
             history_display = (
-                " → ".join(history.split(","))
+                " → ".join(
+                    history.split(",")
+                )
                 if history
                 else "なし"
             )
@@ -204,9 +420,16 @@ def callback():
                 f"履歴：{history_display}"
             )
 
+
+        # ==================================
+        # LINEへ返信
+        # ==================================
+
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+            "Authorization": (
+                f"Bearer {CHANNEL_ACCESS_TOKEN}"
+            )
         }
 
         body = {
@@ -225,11 +448,19 @@ def callback():
             json=body
         )
 
-        print("LINEへの返信結果:", response.status_code)
+        print(
+            "LINEへの返信結果:",
+            response.status_code
+        )
+
         print(response.text)
+
 
     return "OK", 200
 
 
-# アプリ起動時にDBを準備
+# ==========================================
+# 起動時にDBを準備
+# ==========================================
+
 initialize_database()
