@@ -550,7 +550,7 @@ def callback():
                                 "messages": [
                                     {
                                         "type": "text",
-                                        "text": "すべての扉のロックが解除された。"
+                                        "text": "どこかの扉のロックが解除された。"
                                     },
                                     {
                                         "type": "image",
@@ -601,10 +601,51 @@ def callback():
                                 game_clear
                             )
 
-                            reply_text = (
-                                f"{current_room}の部屋に移動しました！\n"
-                                f"現在地：{current_room}"
+                            answer_text = "".join(
+                                history.split(",")
                             )
+
+                            base_url = request.host_url.rstrip("/")
+
+                            headers = {
+                                "Content-Type": "application/json",
+                                "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+                            }
+
+                            body = {
+                                "replyToken": reply_token,
+                                "messages": [
+                                    {
+                                        "type": "image",
+                                        "originalContentUrl": base_url + "/images/wa.png",
+                                        "previewImageUrl": base_url + "/images/wa.png"
+                                    },
+                                    {
+                                        "type": "image",
+                                        "originalContentUrl": base_url + "/images/final.png",
+                                        "previewImageUrl": base_url + "/images/final.png"
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "解答欄：" + answer_text
+                                    }
+                                ]
+                            }
+
+                            response = requests.post(
+                                "https://api.line.me/v2/bot/message/reply",
+                                headers=headers,
+                                json=body
+                            )
+
+                            print(
+                                "LINEへの返信結果:",
+                                response.status_code
+                            )
+
+                            print(response.text)
+
+                            continue
 
 
                     # ==================
