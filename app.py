@@ -10,181 +10,39 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 ADMIN_USER_ID = os.environ.get("ADMIN_USER_ID")
 
 
-# ==========================================
-# 部屋の構造
-# ==========================================
-
 rooms = {
-    "あ": {
-        "上": None,
-        "右": "か",
-        "下": "た",
-        "左": None
-    },
-
-    "か": {
-        "上": None,
-        "右": "さ",
-        "下": "な",
-        "左": "あ"
-    },
-
-    "さ": {
-        "上": None,
-        "右": "DELETE",
-        "下": "は",
-        "左": "か"
-    },
-
-    "た": {
-        "上": "あ",
-        "右": "な",
-        "下": "ま",
-        "左": None
-    },
-
-    "な": {
-        "上": "か",
-        "右": "は",
-        "下": "や",
-        "左": "た"
-    },
-
-    "は": {
-        "上": "さ",
-        "右": None,
-        "下": "ら",
-        "左": "な"
-    },
-
-    "ま": {
-        "上": "た",
-        "右": "や",
-        "下": None,
-        "左": None
-    },
-
-    "や": {
-        "上": "な",
-        "右": None,
-        "下": "わ",
-        "左": None
-    },
-
-    "ら": {
-        "上": "は",
-        "右": None,
-        "下": None,
-        "左": "や"
-    },
-
-    "わ": {
-        "上": "や",
-        "右": None,
-        "下": None,
-        "左": None
-    }
+    "あ": {"上": None, "右": "か", "下": "た", "左": None},
+    "か": {"上": None, "右": "さ", "下": "な", "左": "あ"},
+    "さ": {"上": None, "右": "DELETE", "下": "は", "左": "か"},
+    "た": {"上": "あ", "右": "な", "下": "ま", "左": None},
+    "な": {"上": "か", "右": "は", "下": "や", "左": "た"},
+    "は": {"上": "さ", "右": None, "下": "ら", "左": "な"},
+    "ま": {"上": "た", "右": "や", "下": None, "左": None},
+    "や": {"上": "な", "右": None, "下": "わ", "左": None},
+    "ら": {"上": "は", "右": None, "下": None, "左": "や"},
+    "わ": {"上": "や", "右": None, "下": None, "左": None}
 }
 
-
-# ==========================================
-# 各部屋の入力文字
-#
-# イ段 → 左
-# ウ段 → 上
-# エ段 → 右
-# オ段 → 下
-# ==========================================
 
 room_inputs = {
-
-    "あ": {
-        "い": "左",
-        "う": "上",
-        "え": "右",
-        "お": "下"
-    },
-
-    "か": {
-        "き": "左",
-        "く": "上",
-        "け": "右",
-        "こ": "下"
-    },
-
-    "さ": {
-        "し": "左",
-        "す": "上",
-        "せ": "右",
-        "そ": "下"
-    },
-
-    "た": {
-        "ち": "左",
-        "つ": "上",
-        "て": "右",
-        "と": "下"
-    },
-
-    "な": {
-        "に": "左",
-        "ぬ": "上",
-        "ね": "右",
-        "の": "下"
-    },
-
-    "は": {
-        "ひ": "左",
-        "ふ": "上",
-        "へ": "右",
-        "ほ": "下"
-    },
-
-    "ま": {
-        "み": "左",
-        "む": "上",
-        "め": "右",
-        "も": "下"
-    },
-
-    "や": {
-        "い": "左",
-        "ゆ": "上",
-        "え": "右",
-        "よ": "下"
-    },
-
-    "ら": {
-        "り": "左",
-        "る": "上",
-        "れ": "右",
-        "ろ": "下"
-    },
-
-    "わ": {
-        "ゐ": "左",
-        "う": "上",
-        "ゑ": "右",
-        "を": "下",
-        "ん": "上"
-    }
+    "あ": {"い": "左", "う": "上", "え": "右", "お": "下"},
+    "か": {"き": "左", "く": "上", "け": "右", "こ": "下"},
+    "さ": {"し": "左", "す": "上", "せ": "右", "そ": "下"},
+    "た": {"ち": "左", "つ": "上", "て": "右", "と": "下"},
+    "な": {"に": "左", "ぬ": "上", "ね": "右", "の": "下"},
+    "は": {"ひ": "左", "ふ": "上", "へ": "右", "ほ": "下"},
+    "ま": {"み": "左", "む": "上", "め": "右", "も": "下"},
+    "や": {"い": "左", "ゆ": "上", "え": "右", "よ": "下"},
+    "ら": {"り": "左", "る": "上", "れ": "右", "ろ": "下"},
+    "わ": {"ゐ": "左", "う": "上", "ゑ": "右", "を": "下", "ん": "上"}
 }
 
-
-# ==========================================
-# データベース接続
-# ==========================================
 
 def get_connection():
     return psycopg2.connect(DATABASE_URL)
 
 
-# ==========================================
-# データベース初期化
-# ==========================================
-
 def initialize_database():
-
     connection = get_connection()
     cursor = connection.cursor()
 
@@ -198,45 +56,34 @@ def initialize_database():
 
     cursor.execute("""
         ALTER TABLE players
-        ADD COLUMN IF NOT EXISTS n_unlocked
-        BOOLEAN NOT NULL DEFAULT FALSE
+        ADD COLUMN IF NOT EXISTS n_unlocked BOOLEAN NOT NULL DEFAULT FALSE
     """)
 
     cursor.execute("""
         ALTER TABLE players
-        ADD COLUMN IF NOT EXISTS delete_unlocked
-        BOOLEAN NOT NULL DEFAULT FALSE
+        ADD COLUMN IF NOT EXISTS delete_unlocked BOOLEAN NOT NULL DEFAULT FALSE
     """)
 
     cursor.execute("""
         ALTER TABLE players
-        ADD COLUMN IF NOT EXISTS wa_reached
-        BOOLEAN NOT NULL DEFAULT FALSE
+        ADD COLUMN IF NOT EXISTS wa_reached BOOLEAN NOT NULL DEFAULT FALSE
     """)
 
     cursor.execute("""
         ALTER TABLE players
-        ADD COLUMN IF NOT EXISTS game_clear
-        BOOLEAN NOT NULL DEFAULT FALSE
+        ADD COLUMN IF NOT EXISTS game_clear BOOLEAN NOT NULL DEFAULT FALSE
     """)
 
     connection.commit()
-
     cursor.close()
     connection.close()
 
 
-# ==========================================
-# ユーザー状態取得
-# ==========================================
-
 def get_user_state(user_id):
-
     connection = get_connection()
     cursor = connection.cursor()
 
-    cursor.execute(
-        """
+    cursor.execute("""
         SELECT
             current_room,
             history,
@@ -246,14 +93,11 @@ def get_user_state(user_id):
             game_clear
         FROM players
         WHERE user_id = %s
-        """,
-        (user_id,)
-    )
+    """, (user_id,))
 
     result = cursor.fetchone()
 
     if result is None:
-
         current_room = "か"
         history = ""
         n_unlocked = False
@@ -261,10 +105,8 @@ def get_user_state(user_id):
         wa_reached = False
         game_clear = False
 
-        cursor.execute(
-            """
-            INSERT INTO players
-            (
+        cursor.execute("""
+            INSERT INTO players (
                 user_id,
                 current_room,
                 history,
@@ -274,22 +116,19 @@ def get_user_state(user_id):
                 game_clear
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """,
-            (
-                user_id,
-                current_room,
-                history,
-                n_unlocked,
-                delete_unlocked,
-                wa_reached,
-                game_clear
-            )
-        )
+        """, (
+            user_id,
+            current_room,
+            history,
+            n_unlocked,
+            delete_unlocked,
+            wa_reached,
+            game_clear
+        ))
 
         connection.commit()
 
     else:
-
         current_room = result[0]
         history = result[1]
         n_unlocked = result[2]
@@ -310,10 +149,6 @@ def get_user_state(user_id):
     )
 
 
-# ==========================================
-# ユーザー状態保存
-# ==========================================
-
 def update_user_state(
     user_id,
     current_room,
@@ -323,12 +158,10 @@ def update_user_state(
     wa_reached,
     game_clear
 ):
-
     connection = get_connection()
     cursor = connection.cursor()
 
-    cursor.execute(
-        """
+    cursor.execute("""
         UPDATE players
         SET
             current_room = %s,
@@ -338,44 +171,33 @@ def update_user_state(
             wa_reached = %s,
             game_clear = %s
         WHERE user_id = %s
-        """,
-        (
-            current_room,
-            history,
-            n_unlocked,
-            delete_unlocked,
-            wa_reached,
-            game_clear,
-            user_id
-        )
-    )
+    """, (
+        current_room,
+        history,
+        n_unlocked,
+        delete_unlocked,
+        wa_reached,
+        game_clear,
+        user_id
+    ))
 
     connection.commit()
-
     cursor.close()
     connection.close()
 
 
-# ==========================================
-# ホーム
-# ==========================================
-
 @app.route("/")
 def home():
-
     return "Yubisaki no Meikyu API is alive!"
+
 
 @app.route("/images/<filename>")
 def serve_image(filename):
     return send_from_directory("images", filename)
-    
-# ==========================================
-# LINE Webhook
-# ==========================================
+
 
 @app.route("/callback", methods=["POST"])
 def callback():
-
     data = request.get_json()
 
     print("LINEからWebhookを受信しました！")
@@ -393,19 +215,43 @@ def callback():
 
         text = message.get("text")
 
-        user_id = event.get(
-            "source",
-            {}
-        ).get("userId")
+        user_id = event.get("source", {}).get("userId")
 
-        reply_token = event.get(
-            "replyToken"
-        )
+        reply_token = event.get("replyToken")
 
 
-        # ==================================
-        # 現在の状態を取得
-        # ==================================
+        # 画像テスト
+        if text == "画像テスト":
+
+            image_url = request.host_url.rstrip("/") + "/images/test.png"
+
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+            }
+
+            body = {
+                "replyToken": reply_token,
+                "messages": [
+                    {
+                        "type": "image",
+                        "originalContentUrl": image_url,
+                        "previewImageUrl": image_url
+                    }
+                ]
+            }
+
+            response = requests.post(
+                "https://api.line.me/v2/bot/message/reply",
+                headers=headers,
+                json=body
+            )
+
+            print("LINEへの画像返信結果:", response.status_code)
+            print(response.text)
+
+            continue
+
 
         (
             current_room,
@@ -416,10 +262,6 @@ def callback():
             game_clear
         ) = get_user_state(user_id)
 
-
-        # ==================================
-        # オールリセット
-        # ==================================
 
         if text == "オールリセット":
 
@@ -440,15 +282,8 @@ def callback():
                 game_clear
             )
 
-            reply_text = (
-                "すべての記録をリセットしました。\n"
-                "現在地：か"
-            )
+            reply_text = "すべての記録をリセットしました。\n現在地：か"
 
-
-        # ==================================
-        # 履歴リセット
-        # ==================================
 
         elif text == "履歴リセット":
 
@@ -465,30 +300,17 @@ def callback():
                 game_clear
             )
 
-            reply_text = (
-                "履歴をリセットしました。\n"
-                "現在地：か"
-            )
+            reply_text = "履歴をリセットしました。\n現在地：か"
 
-
-        # ==================================
-        # 状態確認（管理者のみ）
-        # ==================================
 
         elif text == "状態確認":
 
             if user_id != ADMIN_USER_ID:
-
-                reply_text = (
-                    "このコマンドは使用できません。"
-                )
+                reply_text = "このコマンドは使用できません。"
 
             else:
-
                 history_display = (
-                    " → ".join(
-                        history.split(",")
-                    )
+                    " → ".join(history.split(","))
                     if history
                     else "なし"
                 )
@@ -504,10 +326,6 @@ def callback():
                 )
 
 
-        # ==================================
-        # クリア済み
-        # ==================================
-
         elif game_clear:
 
             reply_text = (
@@ -516,21 +334,12 @@ def callback():
             )
 
 
-        # ==================================
-        # 現在の部屋で入力文字を判定
-        # ==================================
-
         else:
 
             direction = room_inputs.get(
                 current_room,
                 {}
             ).get(text)
-
-
-            # ==================================
-            # 移動入力ではない
-            # ==================================
 
             if direction is None:
 
@@ -539,17 +348,9 @@ def callback():
                     f"「{text}」はこの部屋の移動入力ではありません。"
                 )
 
-
             else:
 
-                next_room = rooms[current_room].get(
-                    direction
-                )
-
-
-                # ==================================
-                # 扉が存在しない
-                # ==================================
+                next_room = rooms[current_room].get(direction)
 
                 if next_room is None:
 
@@ -557,11 +358,6 @@ def callback():
                         "その方向には進めません。\n"
                         f"現在地：{current_room}"
                     )
-
-
-                # ==================================
-                # 削除部屋
-                # ==================================
 
                 elif next_room == "DELETE":
 
@@ -587,15 +383,8 @@ def callback():
                             game_clear
                         )
 
-                        reply_text = (
-                            "履歴をリセットしました。\n"
-                            "現在地：か"
-                        )
+                        reply_text = "履歴をリセットしました。\n現在地：か"
 
-
-                # ==================================
-                # 「な」への扉
-                # ==================================
 
                 elif next_room == "な":
 
@@ -626,14 +415,10 @@ def callback():
                         )
 
                         reply_text = (
-                            f"{current_room}の部屋へ移動しました！\n"
+                            f"{current_room}の部屋に移動しました！\n"
                             f"現在地：{current_room}"
                         )
 
-
-                # ==================================
-                # 通常移動
-                # ==================================
 
                 else:
 
@@ -645,15 +430,7 @@ def callback():
                         history = text
 
 
-                    # ==================================
-                    # わの部屋に到達
-                    # ==================================
-
                     if current_room == "わ":
-
-                        # ------------------------------
-                        # クリア判定
-                        # ------------------------------
 
                         if history == "こ,の,よ":
 
@@ -672,14 +449,8 @@ def callback():
                             reply_text = (
                                 "🎉 ゲームクリア！ 🎉\n\n"
                                 "こ → の → よ\n"
-                                "すべての入力が正しかったようです。\n"
                                 "おめでとうございます！"
                             )
-
-
-                        # ------------------------------
-                        # 初めてわに到達
-                        # ------------------------------
 
                         elif not wa_reached:
 
@@ -698,15 +469,10 @@ def callback():
                             )
 
                             reply_text = (
-                                "わの部屋へ移動しました！\n"
+                                "わの部屋に移動しました！\n"
                                 "新たな扉のロックが解除されたようです。\n"
                                 f"現在地：{current_room}"
                             )
-
-
-                        # ------------------------------
-                        # 2回目以降
-                        # ------------------------------
 
                         else:
 
@@ -721,10 +487,9 @@ def callback():
                             )
 
                             reply_text = (
-                                "わの部屋へ移動しました！\n"
+                                "わの部屋に移動しました！\n"
                                 f"現在地：{current_room}"
                             )
-
 
                     else:
 
@@ -739,20 +504,14 @@ def callback():
                         )
 
                         reply_text = (
-                            f"{current_room}の部屋へ移動しました！\n"
+                            f"{current_room}の部屋に移動しました！\n"
                             f"現在地：{current_room}"
                         )
 
 
-        # ==================================
-        # LINEへ返信
-        # ==================================
-
         headers = {
             "Content-Type": "application/json",
-            "Authorization": (
-                f"Bearer {CHANNEL_ACCESS_TOKEN}"
-            )
+            "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
         }
 
         body = {
@@ -771,19 +530,10 @@ def callback():
             json=body
         )
 
-        print(
-            "LINEへの返信結果:",
-            response.status_code
-        )
-
+        print("LINEへの返信結果:", response.status_code)
         print(response.text)
-
 
     return "OK", 200
 
-
-# ==========================================
-# 起動時にDBを準備
-# ==========================================
 
 initialize_database()
