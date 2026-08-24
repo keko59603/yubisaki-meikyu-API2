@@ -1,4 +1,3 @@
-```python
 from flask import Flask, request
 import os
 import requests
@@ -89,7 +88,6 @@ rooms = {
 
 # ==========================================
 # フリック入力
-# ※現在は仮ルール
 # ==========================================
 
 flick_directions = {
@@ -117,7 +115,6 @@ def initialize_database():
     connection = get_connection()
     cursor = connection.cursor()
 
-    # playersテーブルがなければ作成
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS players (
             user_id TEXT PRIMARY KEY,
@@ -126,8 +123,6 @@ def initialize_database():
         )
     """)
 
-    # 既存のplayersテーブルにも
-    # unlocked_roomsを自動追加
     cursor.execute("""
         ALTER TABLE players
         ADD COLUMN IF NOT EXISTS unlocked_rooms
@@ -160,7 +155,6 @@ def get_user_state(user_id):
 
     result = cursor.fetchone()
 
-    # 初めて遊ぶユーザー
     if result is None:
 
         current_room = "か"
@@ -280,11 +274,6 @@ def callback():
             "replyToken"
         )
 
-
-        # ----------------------------------
-        # 現在の状態を取得
-        # ----------------------------------
-
         (
             current_room,
             history,
@@ -292,9 +281,9 @@ def callback():
         ) = get_user_state(user_id)
 
 
-        # ----------------------------------
+        # ==================================
         # 移動入力
-        # ----------------------------------
+        # ==================================
 
         if text in flick_directions:
 
@@ -332,13 +321,8 @@ def callback():
 
             elif next_room == "DELETE":
 
-                # 現在地を「か」に戻す
                 current_room = "か"
-
-                # 履歴だけ消す
                 history = ""
-
-                # 開放済み部屋はそのまま維持
 
                 update_user_state(
                     user_id,
@@ -360,8 +344,6 @@ def callback():
             else:
 
                 current_room = next_room
-
-                # 成功した移動だけ履歴に追加
 
                 if history:
 
@@ -393,10 +375,6 @@ def callback():
                 )
 
 
-                # ----------------------------------
-                # DB保存
-                # ----------------------------------
-
                 update_user_state(
                     user_id,
                     current_room,
@@ -418,9 +396,9 @@ def callback():
                 )
 
 
-        # ----------------------------------
+        # ==================================
         # 移動入力ではない
-        # ----------------------------------
+        # ==================================
 
         else:
 
@@ -482,4 +460,3 @@ def callback():
 # ==========================================
 
 initialize_database()
-```
