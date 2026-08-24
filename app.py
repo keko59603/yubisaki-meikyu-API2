@@ -7,6 +7,7 @@ app = Flask(__name__)
 
 CHANNEL_ACCESS_TOKEN = os.environ.get("CHANNEL_ACCESS_TOKEN")
 DATABASE_URL = os.environ.get("DATABASE_URL")
+ADMIN_USER_ID = os.environ.get("ADMIN_USER_ID")
 
 
 # ==========================================
@@ -383,6 +384,11 @@ def callback():
             "replyToken"
         )
 
+
+        # ==================================
+        # 現在の状態を取得
+        # ==================================
+
         (
             current_room,
             history,
@@ -393,91 +399,204 @@ def callback():
 
 
         # ==================================
-        # 現在の部屋で入力文字を判定
+        # オールリセット
         # ==================================
 
-        direction = room_inputs.get(
-            current_room,
-            {}
-        ).get(text)
+        if text == "オールリセット":
 
+            current_room = "か"
+            history = ""
+            n_unlocked = False
+            delete_unlocked = False
+            wa_reached = False
 
-        # ==================================
-        # 移動入力ではない
-        # ==================================
-
-        if direction is None:
+            update_user_state(
+                user_id,
+                current_room,
+                history,
+                n_unlocked,
+                delete_unlocked,
+                wa_reached
+            )
 
             reply_text = (
-                f"現在地：{current_room}\n"
-                f"「{text}」はこの部屋の移動入力ではありません。"
+                "すべての記録をリセットしました。\n"
+                "現在地：か"
             )
 
 
-        else:
+        # ==================================
+        # 履歴リセット
+        # ==================================
 
-            next_room = rooms[current_room].get(
-                direction
+        elif text == "履歴リセット":
+
+            current_room = "か"
+            history = ""
+
+            update_user_state(
+                user_id,
+                current_room,
+                history,
+                n_unlocked,
+                delete_unlocked,
+                wa_reached
+            )
+
+            reply_text = (
+                "履歴をリセットしました。\n"
+                "現在地：か"
             )
 
 
-            # ==================================
-            # 扉が存在しない
-            # ==================================
+        # ==================================
+        # 状態確認（管理者のみ）
+        # ==================================
 
-            if next_room is None:
+        elif text == "状態確認":
+
+            if user_id != ADMIN_USER_ID:
 
                 reply_text = (
-                    "その方向には進めません。\n"
-                    f"現在地：{current_room}"
+                    "このコマンドは使用できません。"
+                )
+
+            else:
+
+                history_display = (
+                    " → ".join(
+                        history.split(",")
+                    )
+                    if history
+                    else "なし"
+                )
+
+                reply_text = (
+                    "【現在の状態】\n"
+                    f"現在地：{current_room}\n"
+                    f"入力履歴：{history_display}\n"
+                    f"な解放：{'ON' if n_unlocked else 'OFF'}\n"
+                    f"削除部屋：{'ON' if delete_unlocked else 'OFF'}\n"
+                    f"わ到達：{'ON' if wa_reached else 'OFF'}"
                 )
 
 
+        # ==================================
+        # 現在の部屋で入力文字を判定
+        # ==================================
+
+        else:
+
+            direction = room_inputs.get(
+                current_room,
+                {}
+            ).get(text)
+
+
             # ==================================
-            # 削除ボタン
+            # 移動入力ではない
             # ==================================
 
-            elif next_room == "DELETE":
+            if direction is None:
 
-                if not delete_unlocked:
+                reply_text = (
+                    f"現在地：{current_room}\n"
+                    f"「{text}」はこの部屋の移動入力ではありません。"
+                )
+
+
+            else:
+
+                next_room = rooms[current_room].get(
+                    direction
+                )
+
+
+                # ==================================
+                # 扉が存在しない
+                # ==================================
+
+                if next_room is None:
 
                     reply_text = (
-                        "その扉はまだ開いていません。\n"
+                        "その方向には進めません。\n"
                         f"現在地：{current_room}"
                     )
 
-                else:
 
-                    current_room = "か"
-                    history = ""
+                # ==================================
+                # 削除部屋
+                # ==================================
 
-                    update_user_state(
-                        user_id,
-                        current_room,
-                        history,
-                        n_unlocked,
-                        delete_unlocked,
-                        wa_reached
-                    )
+                elif next_room == "DELETE":
 
-                    reply_text = (
-                        "入力をリセットしました。\n"
-                        "現在地：か"
-                    )
+                    if not delete_unlocked:
+
+                        reply_text = (
+                            "その扉はまだ開いていません。\n"
+                            f"現在地：{current_room}"
+                        )
+
+                    else:
+
+                        current_room = "か"
+                        history = ""
+
+                        update_user_state(
+                            user_id,
+                            current_room,
+                            history,
+                            n_unlocked,
+                            delete_unlocked,
+                            wa_reached
+                        )
+
+                        reply_text = (
+                            "履歴をリセットしました。\n"
+                            "現在地：か"
+                        )
 
 
-            # ==================================
-            # 「な」への扉
-            # ==================================
+                # ==================================
+                # 「な」への扉
+                # ==================================
 
-            elif next_room == "な":
+                elif next_room == "な":
 
-                if not n_unlocked:
+                    if not n_unlocked:
 
-                    reply_text = (
-                        "その扉はまだロックされています。\n"
-                        f"現在地：{current_room}"
-                    )
+                        reply_text = (
+                            "その扉はまだロックされています。\n"
+                            f"現在地：{current_room}"
+                        )
+
+                    else:
+
+                        current_room = next_room
+
+                        if history:
+                            history += "," + text
+                        else:
+                            history = text
+
+                        update_user_state(
+                            user_id,
+                            current_room,
+                            history,
+                            n_unlocked,
+                            delete_unlocked,
+                            wa_reached
+                        )
+
+                        reply_text = (
+                            f"{current_room}の部屋へ移動しました！\n"
+                            f"現在地：{current_room}"
+                        )
+
+
+                # ==================================
+                # 通常移動
+                # ==================================
 
                 else:
 
@@ -488,6 +607,40 @@ def callback():
                     else:
                         history = text
 
+
+                    # ==================================
+                    # わの部屋に初めて到達
+                    # ==================================
+
+                    if current_room == "わ":
+
+                        if not wa_reached:
+
+                            wa_reached = True
+                            n_unlocked = True
+                            delete_unlocked = True
+
+                            reply_text = (
+                                "わの部屋へ移動しました！\n"
+                                "新たな扉のロックが解除されたようです。\n"
+                                f"現在地：{current_room}"
+                            )
+
+                        else:
+
+                            reply_text = (
+                                "わの部屋へ移動しました！\n"
+                                f"現在地：{current_room}"
+                            )
+
+                    else:
+
+                        reply_text = (
+                            f"{current_room}の部屋へ移動しました！\n"
+                            f"現在地：{current_room}"
+                        )
+
+
                     update_user_state(
                         user_id,
                         current_room,
@@ -496,68 +649,6 @@ def callback():
                         delete_unlocked,
                         wa_reached
                     )
-
-                    reply_text = (
-                        f"{current_room}の部屋へ移動しました！\n"
-                        f"現在地：{current_room}"
-                    )
-
-
-            # ==================================
-            # 通常移動
-            # ==================================
-
-            else:
-
-                current_room = next_room
-
-                if history:
-                    history += "," + text
-                else:
-                    history = text
-
-
-                # ==================================
-                # わの部屋に初めて到達
-                # ==================================
-
-                if current_room == "わ":
-
-                    if not wa_reached:
-
-                        wa_reached = True
-                        n_unlocked = True
-                        delete_unlocked = True
-
-                        reply_text = (
-                            "わの部屋へ移動しました！\n"
-                            "新たな扉のロックが解除されたようです。\n"
-                            f"現在地：{current_room}"
-                        )
-
-                    else:
-
-                        reply_text = (
-                            "わの部屋へ移動しました！\n"
-                            f"現在地：{current_room}"
-                        )
-
-                else:
-
-                    reply_text = (
-                        f"{current_room}の部屋へ移動しました！\n"
-                        f"現在地：{current_room}"
-                    )
-
-
-                update_user_state(
-                    user_id,
-                    current_room,
-                    history,
-                    n_unlocked,
-                    delete_unlocked,
-                    wa_reached
-                )
 
 
         # ==================================
