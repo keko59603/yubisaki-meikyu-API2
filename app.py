@@ -214,6 +214,12 @@ def initialize_database():
         BOOLEAN NOT NULL DEFAULT FALSE
     """)
 
+    cursor.execute("""
+        ALTER TABLE players
+        ADD COLUMN IF NOT EXISTS game_clear
+        BOOLEAN NOT NULL DEFAULT FALSE
+    """)
+
     connection.commit()
 
     cursor.close()
@@ -236,7 +242,8 @@ def get_user_state(user_id):
             history,
             n_unlocked,
             delete_unlocked,
-            wa_reached
+            wa_reached,
+            game_clear
         FROM players
         WHERE user_id = %s
         """,
@@ -252,6 +259,7 @@ def get_user_state(user_id):
         n_unlocked = False
         delete_unlocked = False
         wa_reached = False
+        game_clear = False
 
         cursor.execute(
             """
@@ -262,9 +270,10 @@ def get_user_state(user_id):
                 history,
                 n_unlocked,
                 delete_unlocked,
-                wa_reached
+                wa_reached,
+                game_clear
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 user_id,
@@ -272,7 +281,8 @@ def get_user_state(user_id):
                 history,
                 n_unlocked,
                 delete_unlocked,
-                wa_reached
+                wa_reached,
+                game_clear
             )
         )
 
@@ -285,6 +295,7 @@ def get_user_state(user_id):
         n_unlocked = result[2]
         delete_unlocked = result[3]
         wa_reached = result[4]
+        game_clear = result[5]
 
     cursor.close()
     connection.close()
@@ -294,7 +305,8 @@ def get_user_state(user_id):
         history,
         n_unlocked,
         delete_unlocked,
-        wa_reached
+        wa_reached,
+        game_clear
     )
 
 
@@ -308,7 +320,8 @@ def update_user_state(
     history,
     n_unlocked,
     delete_unlocked,
-    wa_reached
+    wa_reached,
+    game_clear
 ):
 
     connection = get_connection()
@@ -322,7 +335,8 @@ def update_user_state(
             history = %s,
             n_unlocked = %s,
             delete_unlocked = %s,
-            wa_reached = %s
+            wa_reached = %s,
+            game_clear = %s
         WHERE user_id = %s
         """,
         (
@@ -331,6 +345,7 @@ def update_user_state(
             n_unlocked,
             delete_unlocked,
             wa_reached,
+            game_clear,
             user_id
         )
     )
@@ -394,7 +409,8 @@ def callback():
             history,
             n_unlocked,
             delete_unlocked,
-            wa_reached
+            wa_reached,
+            game_clear
         ) = get_user_state(user_id)
 
 
@@ -409,6 +425,7 @@ def callback():
             n_unlocked = False
             delete_unlocked = False
             wa_reached = False
+            game_clear = False
 
             update_user_state(
                 user_id,
@@ -416,7 +433,8 @@ def callback():
                 history,
                 n_unlocked,
                 delete_unlocked,
-                wa_reached
+                wa_reached,
+                game_clear
             )
 
             reply_text = (
@@ -440,7 +458,8 @@ def callback():
                 history,
                 n_unlocked,
                 delete_unlocked,
-                wa_reached
+                wa_reached,
+                game_clear
             )
 
             reply_text = (
@@ -477,8 +496,21 @@ def callback():
                     f"入力履歴：{history_display}\n"
                     f"な解放：{'ON' if n_unlocked else 'OFF'}\n"
                     f"削除部屋：{'ON' if delete_unlocked else 'OFF'}\n"
-                    f"わ到達：{'ON' if wa_reached else 'OFF'}"
+                    f"わ到達：{'ON' if wa_reached else 'OFF'}\n"
+                    f"ゲームクリア：{'ON' if game_clear else 'OFF'}"
                 )
+
+
+        # ==================================
+        # クリア済み
+        # ==================================
+
+        elif game_clear:
+
+            reply_text = (
+                "このゲームはすでにクリアしています！\n"
+                "もう一度遊ぶ場合は「オールリセット」と入力してください。"
+            )
 
 
         # ==================================
@@ -548,7 +580,8 @@ def callback():
                             history,
                             n_unlocked,
                             delete_unlocked,
-                            wa_reached
+                            wa_reached,
+                            game_clear
                         )
 
                         reply_text = (
@@ -585,7 +618,8 @@ def callback():
                             history,
                             n_unlocked,
                             delete_unlocked,
-                            wa_reached
+                            wa_reached,
+                            game_clear
                         )
 
                         reply_text = (
@@ -609,16 +643,56 @@ def callback():
 
 
                     # ==================================
-                    # わの部屋に初めて到達
+                    # わの部屋に到達
                     # ==================================
 
                     if current_room == "わ":
 
-                        if not wa_reached:
+                        # ------------------------------
+                        # クリア判定
+                        # ------------------------------
+
+                        if history == "こ,の,よ":
+
+                            game_clear = True
+
+                            update_user_state(
+                                user_id,
+                                current_room,
+                                history,
+                                n_unlocked,
+                                delete_unlocked,
+                                wa_reached,
+                                game_clear
+                            )
+
+                            reply_text = (
+                                "🎉 ゲームクリア！ 🎉\n\n"
+                                "こ → の → よ\n"
+                                "すべての入力が正しかったようです。\n"
+                                "おめでとうございます！"
+                            )
+
+
+                        # ------------------------------
+                        # 初めてわに到達
+                        # ------------------------------
+
+                        elif not wa_reached:
 
                             wa_reached = True
                             n_unlocked = True
                             delete_unlocked = True
+
+                            update_user_state(
+                                user_id,
+                                current_room,
+                                history,
+                                n_unlocked,
+                                delete_unlocked,
+                                wa_reached,
+                                game_clear
+                            )
 
                             reply_text = (
                                 "わの部屋へ移動しました！\n"
@@ -626,29 +700,45 @@ def callback():
                                 f"現在地：{current_room}"
                             )
 
+
+                        # ------------------------------
+                        # 2回目以降
+                        # ------------------------------
+
                         else:
+
+                            update_user_state(
+                                user_id,
+                                current_room,
+                                history,
+                                n_unlocked,
+                                delete_unlocked,
+                                wa_reached,
+                                game_clear
+                            )
 
                             reply_text = (
                                 "わの部屋へ移動しました！\n"
                                 f"現在地：{current_room}"
                             )
 
+
                     else:
+
+                        update_user_state(
+                            user_id,
+                            current_room,
+                            history,
+                            n_unlocked,
+                            delete_unlocked,
+                            wa_reached,
+                            game_clear
+                        )
 
                         reply_text = (
                             f"{current_room}の部屋へ移動しました！\n"
                             f"現在地：{current_room}"
                         )
-
-
-                    update_user_state(
-                        user_id,
-                        current_room,
-                        history,
-                        n_unlocked,
-                        delete_unlocked,
-                        wa_reached
-                    )
 
 
         # ==================================
