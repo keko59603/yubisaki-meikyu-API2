@@ -175,7 +175,7 @@ def get_user_state(user_id):
         entry_direction = None
 
         # 最初の向き
-        view_direction = "front"
+        view_direction = "下"
 
         cursor.execute("""
             INSERT INTO players (
@@ -452,7 +452,7 @@ def callback():
             game_clear = False
 
             entry_direction = None
-            view_direction = "front"
+            view_direction = "下"
 
             update_user_state(
                 user_id,
@@ -488,7 +488,7 @@ def callback():
             history = ""
 
             entry_direction = None
-            view_direction = "front"
+            view_direction = "下"
 
             update_user_state(
                 user_id,
@@ -730,7 +730,7 @@ def callback():
             history = ""
 
             entry_direction = None
-            view_direction = "front"
+            view_direction = "下"
 
             update_user_state(
                 user_id,
