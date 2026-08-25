@@ -459,8 +459,7 @@ def callback():
             )
 
             reply_text = (
-                "すべての記録をリセットしました。\n"
-                "現在地：か"
+                "すべての記録をリセットしました。"
             )
 
             send_text_reply(
@@ -496,8 +495,7 @@ def callback():
             )
 
             reply_text = (
-                "履歴をリセットしました。\n"
-                "現在地：か"
+                "履歴をリセットしました。"
             )
 
             send_text_reply(
@@ -739,8 +737,7 @@ def callback():
             )
 
             reply_text = (
-                "履歴をリセットしました。\n"
-                "現在地：か"
+                "履歴をリセットしました。"
             )
 
             send_text_reply(
