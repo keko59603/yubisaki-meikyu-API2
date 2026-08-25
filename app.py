@@ -832,6 +832,16 @@ def callback():
             history = text
 
 
+# --------------------------------------
+# プレイヤー視点での移動方向
+# --------------------------------------
+
+        relative_direction = get_relative_direction(
+            view_direction,
+            direction
+　　　　 )
+
+
         # --------------------------------------
         # 新しい部屋に入ったときの向き
         #
@@ -1104,7 +1114,7 @@ def callback():
             reply_image(
                 reply_token,
                 image_url,
-                f"{direction}方向の部屋に移動しました。"
+                f"{relative_direction}方向の部屋に移動しました。"
             )
 
         else:
