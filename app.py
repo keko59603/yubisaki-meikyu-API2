@@ -839,7 +839,7 @@ def callback():
         relative_direction = get_relative_direction(
             view_direction,
             direction
-　　　　 )
+        )
 
 
         # --------------------------------------
