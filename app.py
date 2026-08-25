@@ -313,22 +313,30 @@ def get_room_image_url(room, direction):
 # LINEへ画像を返信する
 # ==========================================
 
-def reply_image(reply_token, image_url):
+def reply_image(reply_token, image_url, reply_text=None):
 
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
     }
 
+    messages = []
+
+    if reply_text:
+        messages.append({
+            "type": "text",
+            "text": reply_text
+        })
+
+    messages.append({
+        "type": "image",
+        "originalContentUrl": image_url,
+        "previewImageUrl": image_url
+    })
+
     body = {
         "replyToken": reply_token,
-        "messages": [
-            {
-                "type": "image",
-                "originalContentUrl": image_url,
-                "previewImageUrl": image_url
-            }
-        ]
+        "messages": messages
     }
 
     response = requests.post(
@@ -338,7 +346,7 @@ def reply_image(reply_token, image_url):
     )
 
     print(
-        "LINEへの画像返信結果:",
+        "LINEへの画像＋テキスト返信結果:",
         response.status_code
     )
 
@@ -1059,7 +1067,8 @@ def callback():
 
             reply_image(
                 reply_token,
-                image_url
+                image_url,
+                f"{direction}方向の部屋に移動しました。"
             )
 
         else:
