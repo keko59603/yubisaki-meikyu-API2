@@ -392,6 +392,77 @@ def reply_image(reply_token, image_url, reply_text=None):
 
 
 # ==========================================
+# ゲーム開始前の挨拶メッセージ
+# ==========================================
+
+def send_welcome_message(reply_token):
+
+    base_url = request.host_url.rstrip("/")
+
+    image_url = base_url + "/images/ka.down.locked.png"
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+    }
+
+    body = {
+        "replyToken": reply_token,
+        "messages": [
+            {
+                "type": "image",
+                "originalContentUrl": image_url,
+                "previewImageUrl": image_url
+            },
+            {
+                "type": "text",
+                "text":
+                    "気が付くと、あなたは見知らぬ部屋の中に立っていた。\n"
+                    "どうやらここから出るには、部屋にある謎を解き、正しい文字を入力する必要があるらしい。\n"
+                    "こういうことに慣れっこのあなたはさっそく目の前の扉の謎に取り掛かった"
+            },
+            {
+                "type": "text",
+                "text":
+                    "この度は「ユビサキ・メイズ」を登録いただきありがとうございます！"
+                    "いくつか注意事項がございます！"
+            },
+            {
+                "type": "text",
+                "text":
+                    "・解答は指示がある場合を除いて【ひらがな】で入力していただくようお願いします！"
+                    "正しく判定されない場合があります。\n"
+                    "・このLINE謎ではメモを強く推奨します！\n"
+                    "・このLINE謎ではLINE APIを使用しています。通信状況によって返信に時間がかかる場合がありますが、"
+                    "【連投せず】十数秒ほど待ってからもう一度メッセージの送信をお願いします！\n"
+                    "（※応答の遅延はシステム上の仕様であり、謎に一切関係ありません。）\n"
+                    "・オールリセットと送信することで進行状況を友達登録した状態にリセットすることができます。\n"
+                    "（※こちらも詰み防止の機能であり、謎に一切関係ありません。）"
+            },
+            {
+                "type": "text",
+                "text": "「スタート」と送信してゲーム開始"
+            }
+        ]
+    }
+
+    response = requests.post(
+        "https://api.line.me/v2/bot/message/reply",
+        headers=headers,
+        json=body
+    )
+
+    print(
+        "LINEへの挨拶メッセージ返信結果:",
+        response.status_code
+    )
+
+    print(response.text)
+
+    return response
+
+
+# ==========================================
 # トップページ
 # ==========================================
 
@@ -502,14 +573,7 @@ def callback():
                 view_direction
             )
 
-            reply_text = (
-                "すべての記録をリセットしました。"
-            )
-
-            send_text_reply(
-                reply_token,
-                reply_text
-            )
+            send_welcome_message(reply_token)
 
             continue
 
