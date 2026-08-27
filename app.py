@@ -533,7 +533,8 @@ def callback():
             wa_reached,
             game_clear,
             entry_direction,
-            view_direction
+            view_direction,
+            game_started
         ) = get_user_state(user_id)
 
 
