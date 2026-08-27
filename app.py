@@ -1095,7 +1095,7 @@ def callback():
 
                 image_url = (
                     base_url
-                    + "/images/wa_"
+                    + "/images/wa."
                     + direction_names[view_direction]
                     + ".png"
                 )
