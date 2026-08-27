@@ -196,7 +196,8 @@ def get_user_state(user_id):
             wa_reached,
             game_clear,
             entry_direction,
-            view_direction
+            view_direction,
+            game_started
         FROM players
         WHERE user_id = %s
     """, (user_id,))
@@ -211,6 +212,7 @@ def get_user_state(user_id):
         delete_unlocked = False
         wa_reached = False
         game_clear = False
+        game_started = False
 
         # 最初の部屋はどこからも入っていない
         entry_direction = None
@@ -255,6 +257,7 @@ def get_user_state(user_id):
         game_clear = result[5]
         entry_direction = result[6]
         view_direction = result[7]
+        game_started = result[8]
 
     cursor.close()
     connection.close()
@@ -267,7 +270,8 @@ def get_user_state(user_id):
         wa_reached,
         game_clear,
         entry_direction,
-        view_direction
+        view_direction,
+        game_started
     )
 
 
@@ -284,7 +288,8 @@ def update_user_state(
     wa_reached,
     game_clear,
     entry_direction,
-    view_direction
+    view_direction,
+    game_started
 ):
 
     connection = get_connection()
@@ -300,7 +305,8 @@ def update_user_state(
             wa_reached = %s,
             game_clear = %s,
             entry_direction = %s,
-            view_direction = %s
+            view_direction = %s,
+            game_started = %s
         WHERE user_id = %s
     """, (
         current_room,
@@ -311,6 +317,7 @@ def update_user_state(
         game_clear,
         entry_direction,
         view_direction,
+        game_started,
         user_id
     ))
 
@@ -562,6 +569,7 @@ def callback():
             delete_unlocked = False
             wa_reached = False
             game_clear = False
+            game_started = False
 
             entry_direction = None
             view_direction = "下"
@@ -575,13 +583,45 @@ def callback():
                 wa_reached,
                 game_clear,
                 entry_direction,
-                view_direction
+                view_direction,
+                game_started
             )
 
             send_welcome_message(reply_token)
 
             continue
 
+
+        if text == "スタート" and not game_started:
+
+            current_room = "か"
+            history = ""
+
+            n_unlocked = False
+            delete_unlocked = False
+            wa_reached = False
+            game_clear = False
+            game_started = True
+
+            entry_direction = None
+            view_direction = "下"
+
+            update_user_state(
+                user_id,
+                current_room,
+                history,
+                n_unlocked,
+                delete_unlocked,
+                wa_reached,
+                game_clear,
+                entry_direction,
+                view_direction,
+                game_started
+            )
+
+            send_start_message(reply_token)
+
+            continue
 
         # ======================================
         # 履歴リセット
@@ -604,7 +644,8 @@ def callback():
                 wa_reached,
                 game_clear,
                 entry_direction,
-                view_direction
+                view_direction,
+                game_started
             )
 
             reply_text = (
@@ -656,7 +697,8 @@ def callback():
                 wa_reached,
                 game_clear,
                 entry_direction,
-                view_direction
+                view_direction,
+                game_started
             )
 
 
@@ -762,6 +804,9 @@ def callback():
         # 移動入力を取得
         # ======================================
 
+        if not game_started:
+            continue
+            
         direction = room_inputs.get(
             current_room,
             {}
