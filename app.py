@@ -337,7 +337,7 @@ def get_room_image_url(room, direction):
     }
 
     filename = (
-        f"{room_name}_{direction_names[direction]}.png"
+        f"{room_name}.{direction_names[direction]}.png"
     )
 
     base_url = request.host_url.rstrip("/")
