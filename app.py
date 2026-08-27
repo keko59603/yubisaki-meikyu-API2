@@ -472,6 +472,59 @@ def send_welcome_message(reply_token):
     print(response.text)
 
     return response
+    
+# ==========================================
+# ゲーム開始メッセージ
+# ==========================================
+
+def send_start_message(reply_token):
+
+    base_url = request.host_url.rstrip("/")
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {CHANNEL_ACCESS_TOKEN}"
+    }
+
+    body = {
+        "replyToken": reply_token,
+        "messages": [
+            {
+                "type": "image",
+                "originalContentUrl": base_url + "/images/ka.down.locked.png",
+                "previewImageUrl": base_url + "/images/ka.down.locked.png"
+            },
+            {
+                "type": "image",
+                "originalContentUrl": base_url + "/images/ka.left.puzzle.png",
+                "previewImageUrl": base_url + "/images/ka.left.puzzle.png"
+            },
+            {
+                "type": "image",
+                "originalContentUrl": base_url + "/images/ka.right.puzzle.png",
+                "previewImageUrl": base_url + "/images/ka.right.puzzle.png"
+            },
+            {
+                "type": "text",
+                "text": "※各部屋で「振り返る」と送信すると後ろの景色を見ることができます。"
+            }
+        ]
+    }
+
+    response = requests.post(
+        "https://api.line.me/v2/bot/message/reply",
+        headers=headers,
+        json=body
+    )
+
+    print(
+        "LINEへのゲーム開始メッセージ返信結果:",
+        response.status_code
+    )
+
+    print(response.text)
+
+    return response
 
 
 # ==========================================
