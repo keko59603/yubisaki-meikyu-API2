@@ -1011,7 +1011,7 @@ def callback():
                         {
                             "type": "image",
                             "originalContentUrl":
-                                base_url + "/images/wa_" +
+                                base_url + "/images/wa." +
                                 {
                                     "上": "up",
                                     "下": "down",
@@ -1019,7 +1019,7 @@ def callback():
                                     "右": "right"
                                 }[view_direction] + ".png",
                             "previewImageUrl":
-                                base_url + "/images/wa_" +
+                                base_url + "/images/wa." +
                                 {
                                     "上": "up",
                                     "下": "down",
