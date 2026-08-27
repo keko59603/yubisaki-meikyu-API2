@@ -166,7 +166,12 @@ def initialize_database():
         ALTER TABLE players
         ADD COLUMN IF NOT EXISTS view_direction TEXT
     """)
-
+    
+    cursor.execute("""
+        ALTER TABLE players
+        ADD COLUMN IF NOT EXISTS game_started BOOLEAN NOT NULL DEFAULT FALSE
+    """)
+    
     connection.commit()
 
     cursor.close()
