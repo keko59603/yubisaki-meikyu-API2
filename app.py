@@ -946,7 +946,8 @@ def callback():
                 wa_reached,
                 game_clear,
                 entry_direction,
-                view_direction
+                view_direction,
+                game_started
             )
 
             reply_text = (
@@ -1053,7 +1054,8 @@ def callback():
                     wa_reached,
                     game_clear,
                     entry_direction,
-                    view_direction
+                    view_direction,
+                    game_started
                 )
 
                 reply_text = (
@@ -1088,7 +1090,8 @@ def callback():
                     wa_reached,
                     game_clear,
                     entry_direction,
-                    view_direction
+                    view_direction,
+                    game_started
                 )
 
 
@@ -1178,7 +1181,8 @@ def callback():
                     wa_reached,
                     game_clear,
                     entry_direction,
-                    view_direction
+                    view_direction,
+                    game_started
                 )
 
 
@@ -1264,7 +1268,8 @@ def callback():
             wa_reached,
             game_clear,
             entry_direction,
-            view_direction
+            view_direction,
+            game_started
         )
 
 
