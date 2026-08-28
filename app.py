@@ -824,7 +824,8 @@ def callback():
                     f"な解放：{'ON' if n_unlocked else 'OFF'}\n"
                     f"削除部屋：{'ON' if delete_unlocked else 'OFF'}\n"
                     f"わ到達：{'ON' if wa_reached else 'OFF'}\n"
-                    f"ゲームクリア：{'ON' if game_clear else 'OFF'}"
+                    f"ゲームクリア：{'ON' if game_clear else 'OFF'}\n"
+                    f"ゲーム開始：{'ON' if game_started else 'OFF'}"
                 )
 
             send_text_reply(
