@@ -854,7 +854,57 @@ def callback():
 
             continue
 
+        
+        # ======================================
+        # 振り返る
+        # ======================================
 
+        if text == "振り返る":
+
+            opposite_direction = {
+                "上": "下",
+                "下": "上",
+                "左": "右",
+                "右": "左"
+            }
+
+            view_direction = opposite_direction.get(
+                view_direction
+            )
+
+            image_url = get_room_image_url(
+                current_room,
+                view_direction
+            )
+
+            if image_url:
+                reply_image(
+                    reply_token,
+                    image_url,
+                    "振り返りました。"
+                )
+            else:
+                send_text_reply(
+                    reply_token,
+                    "振り返ることができません。"
+                )
+
+            update_user_state(
+                user_id,
+                current_room,
+                history,
+                n_unlocked,
+                delete_unlocked,
+                wa_reached,
+                game_clear,
+                entry_direction,
+                view_direction,
+                game_started
+            )
+
+            continue
+
+        
         # ======================================
         # 移動入力を取得
         # ======================================
